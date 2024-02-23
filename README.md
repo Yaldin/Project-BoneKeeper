@@ -1,2 +1,2 @@
-# Bones
+# BoneKepper
  My first game project
