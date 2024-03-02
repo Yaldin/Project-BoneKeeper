@@ -4,9 +4,12 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
+    Animator animator;
+
     public float maxSpeed;
     public Transform groundCheck;
     public float jumpForce;
+    public float fireRate;
 
     private float speed;
     private Rigidbody2D rb;
@@ -14,12 +17,18 @@ public class Player : MonoBehaviour
     private bool onGround;
     private bool jump = false;
     private bool doubleJump;
+    private Weapon weaponEquipped;
+    private Animator anim;
+    private Attack attack;
+    private float nextAttack;
 
     // Start is called before the first frame update
-    void Start() 
+    void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         speed = maxSpeed;
+        anim = GetComponent<Animator>();
+        attack = GetComponentInChildren<Attack>();
     }
 
     // Update is called once per frame
@@ -29,16 +38,27 @@ public class Player : MonoBehaviour
         if (onGround)
             doubleJump = false;
 
-        if(Input.GetButtonDown("Jump") && (onGround || doubleJump))
+        if (Input.GetButtonDown("Jump") && (onGround || doubleJump))
         {
-            jump = true;
+            Jump();
             if (!onGround && !doubleJump)
                 doubleJump = true;
         }
 
+        if (Input.GetButtonDown("Fire1") && Time.time > nextAttack && weaponEquipped != null)
+        {
+            anim.SetTrigger("Attack");
+            attack.PlayAnimation(weaponEquipped.animation);
+            nextAttack = Time.time + fireRate;
+        }
+
+        // Obtém a velocidade horizontal do seu input
+        float horizontalSpeed = Input.GetAxisRaw("Horizontal");
+        // Atualiza o parâmetro "Speed" no Animator com a velocidade horizontal.
+        anim.SetFloat("Speed", Mathf.Clamp01(Mathf.Abs(horizontalSpeed)));
     }
 
-    private void FixedUpdate() 
+    private void FixedUpdate()
     {
         float h = Input.GetAxisRaw("Horizontal");
 
@@ -48,7 +68,7 @@ public class Player : MonoBehaviour
         {
             Flip();
         }
-        else if(h < 0 && facingRight) 
+        else if (h < 0 && facingRight)
         {
             Flip();
         }
@@ -60,8 +80,9 @@ public class Player : MonoBehaviour
             jump = false;
         }
     }
+
     void Flip()
-    { 
+    {
         facingRight = !facingRight;
 
         Vector3 scale = transform.localScale;
@@ -69,5 +90,25 @@ public class Player : MonoBehaviour
         transform.localScale = scale;
     }
 
+    void Jump()
+    {
+        anim.SetBool("Jump", true);
+        rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+        jump = true;
+    }
 
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("onGround"))
+        {
+            jump = false;
+            anim.SetBool("Jump", false);
+        }
+    }
+
+    public void AddWeapon(Weapon weapon)
+    {
+        weaponEquipped = weapon;
+        attack.SetWeapon(weaponEquipped.damage);
+    }
 }
